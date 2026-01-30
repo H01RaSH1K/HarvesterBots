@@ -1386,6 +1386,7 @@ MonoBehaviour:
   _unitPool: {fileID: 1787792914}
   _unitSpawnPoint: {fileID: 1459792103}
   _startUnitCount: 3
+  _unitCost: 3
   _resourceScanner: {fileID: 2048438392}
 --- !u!23 &2048438394
 MeshRenderer:

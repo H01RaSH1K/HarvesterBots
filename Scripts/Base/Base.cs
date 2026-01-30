@@ -9,6 +9,7 @@ public class Base : MonoBehaviour, IInteractable
     [SerializeField] private UnitPool _unitPool;
     [SerializeField] private Transform _unitSpawnPoint;
     [SerializeField] private int _startUnitCount;
+    [SerializeField] private int _unitCost;
     [SerializeField] private ResourceScanner _resourceScanner;
 
     private Counter _resourceCounter;
@@ -18,6 +19,7 @@ public class Base : MonoBehaviour, IInteractable
     private List<Unit> _unassignedUnits;
     private List<Resource> _unassignedResources;
     private Dictionary<Resource, Unit> _unitsByAssignedResource;
+    private Func<bool> _trySpendResourcesDelegate;
 
     public float InteractionRadiusSquared => _interactionRadiusSquared;
 
@@ -30,6 +32,7 @@ public class Base : MonoBehaviour, IInteractable
         _unassignedUnits = new List<Unit>();
         _unassignedResources = new List<Resource>();
         _unitsByAssignedResource = new Dictionary<Resource, Unit>();
+        _trySpendResourcesDelegate = TryAddUnit;
     }
 
     private void OnEnable()
@@ -61,6 +64,7 @@ public class Base : MonoBehaviour, IInteractable
         {
             _resourceCounter.Increment();
             resource.Expire();
+            _trySpendResourcesDelegate();
         }
 
         _unassignedUnits.Add(unit);
@@ -105,5 +109,15 @@ public class Base : MonoBehaviour, IInteractable
         Unit unit = _unitPool.GetObject();
         unit.transform.position = _unitSpawnPoint.transform.position;
         _unassignedUnits.Add(unit);
+    }
+
+    private bool TryAddUnit()
+    {
+        if (_resourceCounter.Count < _unitCost)
+            return false;
+
+        _resourceCounter.Remove(_unitCost);
+        AddUnit();
+        return true;
     }
 }
