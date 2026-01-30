@@ -5,6 +5,7 @@ using UnityEngine;
 
 public class ResourceScanner : MonoBehaviour
 {
+    [SerializeField] private ResourceClaimer _resourceClaimer;
     [SerializeField] private float _scanRadius;
     [SerializeField] private float _scanInterval;
     [SerializeField] private LayerMask _layerMask = new LayerMask();
@@ -28,9 +29,15 @@ public class ResourceScanner : MonoBehaviour
         _newScanResults = new HashSet<Resource>();
     }
 
+    private void OnEnable()
+    {
+        _resourceClaimer.ResourceClaimed += OnResourceClaimed;
+    }
+
     private void OnDisable()
     {
         StopScanning();
+        _resourceClaimer.ResourceClaimed -= OnResourceClaimed;
     }
 
     public void StartScanning()
@@ -48,7 +55,7 @@ public class ResourceScanner : MonoBehaviour
         _scanningCoroutine = null;
 
         foreach (Resource resource in _lastScanResults)
-            OnResourceLost(resource);
+            ResourceLost?.Invoke(resource);
 
         _lastScanResults.Clear();
     }
@@ -59,11 +66,11 @@ public class ResourceScanner : MonoBehaviour
 
         foreach (Resource resource in _lastScanResults)
             if (_newScanResults.Contains(resource) == false)
-                OnResourceLost(resource);
+                ResourceLost?.Invoke(resource);
 
         foreach (Resource resource in _newScanResults)
             if (_lastScanResults.Contains(resource) == false)
-                OnResourceFound(resource);
+                ResourceFound?.Invoke(resource);
 
         HashSet<Resource> temp = _lastScanResults;
         _lastScanResults = _newScanResults;
@@ -91,7 +98,8 @@ public class ResourceScanner : MonoBehaviour
             Collider collider = _overlapResultsBuffer[i];
                 
             if (collider.TryGetComponent(out Resource resource))
-                _newScanResults.Add(resource);
+                if (_resourceClaimer.IsClaimed(resource) == false)
+                    _newScanResults.Add(resource);
         }
     }
 
@@ -125,15 +133,8 @@ public class ResourceScanner : MonoBehaviour
         return overlappedCount;
     }
 
-    private void OnResourceLost(Resource resource)
+    private void OnResourceClaimed(Resource resource)
     {
-        resource.Taken -= OnResourceLost;
         ResourceLost?.Invoke(resource);
-    }
-
-    private void OnResourceFound(Resource resource)
-    {
-        resource.Taken += OnResourceLost;
-        ResourceFound?.Invoke(resource);
     }
 }

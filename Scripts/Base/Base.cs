@@ -6,19 +6,20 @@ using UnityEngine;
 public class Base : MonoBehaviour, IInteractable
 {
     [SerializeField] private float _interactionRadius;
-    [SerializeField] private UnitPool _unitPool;
+    [SerializeField] private UnitCreator _unitCreator;
     [SerializeField] private Transform _unitSpawnPoint;
     [SerializeField] private int _startUnitCount;
     [SerializeField] private int _unitCost;
+    [SerializeField] private ResourceClaimer _resourceClaimer;
     [SerializeField] private ResourceScanner _resourceScanner;
 
     private Counter _resourceCounter;
 
     private float _interactionRadiusSquared;
 
+    private List<Unit> _units;
     private List<Unit> _unassignedUnits;
     private List<Resource> _unassignedResources;
-    private Dictionary<Resource, Unit> _unitsByAssignedResource;
     private Func<bool> _trySpendResourcesDelegate;
 
     public float InteractionRadiusSquared => _interactionRadiusSquared;
@@ -29,14 +30,17 @@ public class Base : MonoBehaviour, IInteractable
     {
         _resourceCounter = GetComponent<Counter>();
         _interactionRadiusSquared = _interactionRadius * _interactionRadius;
+        _units = new List<Unit>();
         _unassignedUnits = new List<Unit>();
         _unassignedResources = new List<Resource>();
-        _unitsByAssignedResource = new Dictionary<Resource, Unit>();
         _trySpendResourcesDelegate = TryAddUnit;
     }
 
     private void OnEnable()
     {
+        foreach (Unit unit in _units)
+            unit.ResourceCollected += OnResourceCollectedByUnit;
+
         _resourceScanner.StopScanning();
         _resourceScanner.ResourceLost += OnResourceLost;
         _resourceScanner.ResourceFound += OnResourceFound;
@@ -51,12 +55,15 @@ public class Base : MonoBehaviour, IInteractable
 
     private void OnDisable()
     {
+        foreach (Unit unit in _units)
+            unit.ResourceCollected -= OnResourceCollectedByUnit;
+
         _resourceScanner.StopScanning();
         _resourceScanner.ResourceLost -= OnResourceLost;
         _resourceScanner.ResourceFound -= OnResourceFound;
     }
 
-    public void BeInteracted(Unit unit)
+    public void Interact(Unit unit)
     {
         Resource resource = unit.ResourceCarrier.DropResource();
 
@@ -77,16 +84,15 @@ public class Base : MonoBehaviour, IInteractable
         AssignResources();
     }
 
+    private void OnResourceCollectedByUnit(Unit unit)
+    {
+        unit.MoveToInteract(this);
+    }
+
     private void OnResourceLost(Resource resource)
     {
         if (_unassignedResources.Contains(resource))
             _unassignedResources.Remove(resource);
-
-        if (_unitsByAssignedResource.TryGetValue(resource, out Unit assignedUnit))
-        {
-            assignedUnit.MoveToInteract(this);
-            _unitsByAssignedResource.Remove(resource);
-        }
     }
 
     private void AssignResources()
@@ -99,16 +105,18 @@ public class Base : MonoBehaviour, IInteractable
             Resource resource = _unassignedResources[i];
             _unassignedUnits.RemoveAt(i);
             _unassignedResources.RemoveAt(i);
-            _unitsByAssignedResource[resource] = unit;
+            _resourceClaimer.ClaimResource(resource);
             unit.MoveToInteract(resource);
         }
     }
 
     private void AddUnit()
     {
-        Unit unit = _unitPool.GetObject();
-        unit.transform.position = _unitSpawnPoint.transform.position;
+        Unit unit = _unitCreator.CreateUnit();
+        unit.transform.position = _unitSpawnPoint.position;
+        _units.Add(unit);
         _unassignedUnits.Add(unit);
+        unit.ResourceCollected += OnResourceCollectedByUnit;
     }
 
     private bool TryAddUnit()
@@ -116,7 +124,7 @@ public class Base : MonoBehaviour, IInteractable
         if (_resourceCounter.Count < _unitCost)
             return false;
 
-        _resourceCounter.Remove(_unitCost);
+        _resourceCounter.Substract(_unitCost);
         AddUnit();
         return true;
     }

@@ -8,6 +8,8 @@ public class Unit : MonoBehaviour
     public UnitMover UnitMover { get; private set; }
     public ResourceCarrier ResourceCarrier { get; private set; }
 
+    public event Action<Unit> ResourceCollected;
+
 
     private void Awake()
     {
@@ -17,12 +19,12 @@ public class Unit : MonoBehaviour
 
     private void OnEnable()
     {
-        UnitMover.InteractableReached += OnInteractableReached;
+        UnitMover.InteractableReached += Interact;
     }
 
     private void OnDisable()
     {
-        UnitMover.InteractableReached -= OnInteractableReached;
+        UnitMover.InteractableReached -= Interact;
     }
 
     public void MoveToInteract(IInteractable interactable)
@@ -30,27 +32,14 @@ public class Unit : MonoBehaviour
         UnitMover.MoveToInteractable(interactable);
     }
 
-    private void OnInteractableReached(IInteractable interactable)
-    {
-        Interact(interactable);
-    }
-
-    public void BuildBase()
-    {
-        throw new System.NotImplementedException();
-    }
-
     public void CollectResourse(Resource resource)
     {
-    }
-
-    public void GiveResourses()
-    {
-        throw new System.NotImplementedException();
+        ResourceCarrier.TakeResource(resource);
+        ResourceCollected?.Invoke(this);
     }
 
     private void Interact(IInteractable interactable)
     {
-        interactable.BeInteracted(this);
+        interactable.Interact(this);
     }
 }
