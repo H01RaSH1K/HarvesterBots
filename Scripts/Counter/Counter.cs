@@ -23,7 +23,7 @@ public class Counter : MonoBehaviour
             ChangeCount(count);
     }
 
-    public void Remove(int count)
+    public void Substract(int count)
     {
         if (count > 0)
             ChangeCount(-count);

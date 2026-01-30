@@ -624,6 +624,7 @@ GameObject:
   m_Component:
   - component: {fileID: 803377596}
   - component: {fileID: 803377595}
+  - component: {fileID: 803377597}
   m_Layer: 0
   m_Name: ResourceSpawners
   m_TagString: Untagged
@@ -672,6 +673,18 @@ Transform:
   - {fileID: 1229678029}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &803377597
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 803377593}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d32daca5c8994ee4e91d2fe44423406d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &906682888
 GameObject:
   m_ObjectHideFlags: 0
@@ -1138,29 +1151,14 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1787792915}
-  - component: {fileID: 1787792914}
+  - component: {fileID: 1787792916}
   m_Layer: 0
-  m_Name: UnitPool
+  m_Name: UnitCreator
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1787792914
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1787792913}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 60cba02aaaee46c4ca904912ecc30e4d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _objectPrefab: {fileID: 3063222026293897461, guid: 1f20dc154759a56419d75e60be63297d, type: 3}
-  _poolCapacity: 15
-  _poolMaxSize: 50
 --- !u!4 &1787792915
 Transform:
   m_ObjectHideFlags: 0
@@ -1176,6 +1174,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1787792916
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1787792913}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a7280e37b9260d4d9e81903540bd27b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _unitPrefab: {fileID: 3063222026293897461, guid: 1f20dc154759a56419d75e60be63297d, type: 3}
 --- !u!1 &1833928568
 GameObject:
   m_ObjectHideFlags: 0
@@ -1364,6 +1375,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 15bd5db0e5c7151478b349abc6b8cc47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _resourceClaimer: {fileID: 803377597}
   _scanRadius: 25
   _scanInterval: 10
   _layerMask:
@@ -1383,9 +1395,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _interactionRadius: 2
-  _unitPool: {fileID: 1787792914}
+  _unitCreator: {fileID: 1787792916}
   _unitSpawnPoint: {fileID: 1459792103}
   _startUnitCount: 3
+  _resourceClaimer: {fileID: 803377597}
   _resourceScanner: {fileID: 2048438392}
 --- !u!23 &2048438394
 MeshRenderer:
