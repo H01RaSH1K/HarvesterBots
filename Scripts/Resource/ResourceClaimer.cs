@@ -6,8 +6,6 @@ public class ResourceClaimer : MonoBehaviour
 {
     private HashSet<Resource> _claimedResources;
 
-    public event Action<Resource> ResourceClaimed;
-
     private void Awake()
     {
         _claimedResources = new HashSet<Resource>();
@@ -31,7 +29,6 @@ public class ResourceClaimer : MonoBehaviour
 
         _claimedResources.Add(resource);
         resource.Expired += OnResourceExpired;
-        ResourceClaimed?.Invoke(resource);
     }
 
     public bool IsClaimed(Resource resource)

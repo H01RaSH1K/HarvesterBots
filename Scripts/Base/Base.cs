@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 [RequireComponent(typeof(Counter))]
@@ -17,8 +18,7 @@ public class Base : MonoBehaviour, IInteractable
     private float _interactionRadiusSquared;
 
     private List<Unit> _units;
-    private List<Unit> _unassignedUnits;
-    private List<Resource> _unassignedResources;
+    private Queue<Unit> _unassignedUnits;
 
     public float InteractionRadiusSquared => _interactionRadiusSquared;
 
@@ -29,8 +29,7 @@ public class Base : MonoBehaviour, IInteractable
         _resourceCounter = GetComponent<Counter>();
         _interactionRadiusSquared = _interactionRadius * _interactionRadius;
         _units = new List<Unit>();
-        _unassignedUnits = new List<Unit>();
-        _unassignedResources = new List<Resource>();
+        _unassignedUnits = new Queue<Unit>();
     }
 
     private void OnEnable()
@@ -39,8 +38,7 @@ public class Base : MonoBehaviour, IInteractable
             unit.ResourceCollected += OnResourceCollectedByUnit;
 
         _resourceScanner.StopScanning();
-        _resourceScanner.ResourceLost += OnResourceLost;
-        _resourceScanner.ResourceFound += OnResourceFound;
+        _resourceScanner.ResourceDetected += OnResourcesDetected;
         _resourceScanner.StartScanning();
     }
 
@@ -56,8 +54,7 @@ public class Base : MonoBehaviour, IInteractable
             unit.ResourceCollected -= OnResourceCollectedByUnit;
 
         _resourceScanner.StopScanning();
-        _resourceScanner.ResourceLost -= OnResourceLost;
-        _resourceScanner.ResourceFound -= OnResourceFound;
+        _resourceScanner.ResourceDetected -= OnResourcesDetected;
     }
 
     public void Interact(Unit unit)
@@ -70,14 +67,12 @@ public class Base : MonoBehaviour, IInteractable
             resource.Expire();
         }
 
-        _unassignedUnits.Add(unit);
-        AssignResources();
+        _unassignedUnits.Enqueue(unit);
     }
 
-    private void OnResourceFound(Resource resource)
+    private void OnResourcesDetected(Resource resource)
     {
-        _unassignedResources.Add(resource);
-        AssignResources();
+        TryAssignResource(resource);
     }
 
     private void OnResourceCollectedByUnit(Unit unit)
@@ -85,25 +80,17 @@ public class Base : MonoBehaviour, IInteractable
         unit.MoveToInteract(this);
     }
 
-    private void OnResourceLost(Resource resource)
+    private bool TryAssignResource(Resource resource)
     {
-        if (_unassignedResources.Contains(resource))
-            _unassignedResources.Remove(resource);
-    }
+        if (_resourceClaimer.IsClaimed(resource))
+            return false;
 
-    private void AssignResources()
-    {
-        int minCount = Math.Min(_unassignedResources.Count, _unassignedUnits.Count);
+        if (_unassignedUnits.TryDequeue(out Unit unit) == false) 
+            return false;
 
-        for (int i = 0; i < minCount; i++)
-        {
-            Unit unit = _unassignedUnits[i];
-            Resource resource = _unassignedResources[i];
-            _unassignedUnits.RemoveAt(i);
-            _unassignedResources.RemoveAt(i);
-            _resourceClaimer.ClaimResource(resource);
-            unit.MoveToInteract(resource);
-        }
+        _resourceClaimer.ClaimResource(resource);
+        unit.MoveToInteract(resource);
+        return true;
     }
 
     private void AddUnit()
@@ -111,7 +98,7 @@ public class Base : MonoBehaviour, IInteractable
         Unit unit = _unitCreator.CreateUnit();
         unit.transform.position = _unitSpawnPoint.position;
         _units.Add(unit);
-        _unassignedUnits.Add(unit);
+        _unassignedUnits.Enqueue(unit);
         unit.ResourceCollected += OnResourceCollectedByUnit;
     }
 }

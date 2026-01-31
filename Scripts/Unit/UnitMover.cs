@@ -39,16 +39,8 @@ public class UnitMover : MonoBehaviour
                 break;
 
             float maxStepDistance = _movementSpeed * Time.deltaTime;
-            float maxStepDistanceSquared = maxStepDistance * maxStepDistance;
-
-            if (remainingDistanceSquared <= maxStepDistanceSquared)
-            {
-                transform.position = targetPosition;
-                break;
-            }
-
-            Vector3 direction = toTarget.normalized;
-            transform.position = currentPosition + direction * maxStepDistance;
+            Vector3 nextPosition = Vector3.MoveTowards(currentPosition, targetPosition, maxStepDistance);
+            transform.position = nextPosition;
             yield return null;
         }
 
