@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 [RequireComponent(typeof(Counter))]
@@ -10,8 +8,7 @@ public class Base : MonoBehaviour, IInteractable
     [SerializeField] private UnitCreator _unitCreator;
     [SerializeField] private Transform _unitSpawnPoint;
     [SerializeField] private int _startUnitCount;
-    [SerializeField] private ResourceClaimer _resourceClaimer;
-    [SerializeField] private ResourceScanner _resourceScanner;
+    [SerializeField] private AvailableResourceProvider _resourceProvider;
 
     private Counter _resourceCounter;
 
@@ -37,9 +34,7 @@ public class Base : MonoBehaviour, IInteractable
         foreach (Unit unit in _units)
             unit.ResourceCollected += OnResourceCollectedByUnit;
 
-        _resourceScanner.StopScanning();
-        _resourceScanner.ResourceDetected += OnResourcesDetected;
-        _resourceScanner.StartScanning();
+        _resourceProvider.NewResourceAvailable += OnNewResourceAvailable;
     }
 
     private void Start()
@@ -53,8 +48,7 @@ public class Base : MonoBehaviour, IInteractable
         foreach (Unit unit in _units)
             unit.ResourceCollected -= OnResourceCollectedByUnit;
 
-        _resourceScanner.StopScanning();
-        _resourceScanner.ResourceDetected -= OnResourcesDetected;
+        _resourceProvider.NewResourceAvailable -= OnNewResourceAvailable;
     }
 
     public void Interact(Unit unit)
@@ -68,11 +62,12 @@ public class Base : MonoBehaviour, IInteractable
         }
 
         _unassignedUnits.Enqueue(unit);
+        AssignResources();
     }
 
-    private void OnResourcesDetected(Resource resource)
+    private void OnNewResourceAvailable()
     {
-        TryAssignResource(resource);
+        AssignResources();
     }
 
     private void OnResourceCollectedByUnit(Unit unit)
@@ -80,17 +75,20 @@ public class Base : MonoBehaviour, IInteractable
         unit.MoveToInteract(this);
     }
 
-    private bool TryAssignResource(Resource resource)
+    private void AssignResources()
     {
-        if (_resourceClaimer.IsClaimed(resource))
-            return false;
+        Unit unit;
 
-        if (_unassignedUnits.TryDequeue(out Unit unit) == false) 
-            return false;
+        while (_unassignedUnits.TryDequeue(out unit))
+        {
+            if (_resourceProvider.TryClaimAvailableResource(out Resource resource) == false)
+            {
+                _unassignedUnits.Enqueue(unit);
+                return;
+            }
 
-        _resourceClaimer.ClaimResource(resource);
-        unit.MoveToInteract(resource);
-        return true;
+            unit.MoveToInteract(resource);
+        }
     }
 
     private void AddUnit()

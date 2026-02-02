@@ -6,6 +6,8 @@ public class ResourceClaimer : MonoBehaviour
 {
     private HashSet<Resource> _claimedResources;
 
+    public event Action<Resource> ResourceClaimed;
+
     private void Awake()
     {
         _claimedResources = new HashSet<Resource>();
@@ -19,16 +21,15 @@ public class ResourceClaimer : MonoBehaviour
         _claimedResources.Clear();
     }
 
-    public void ClaimResource(Resource resource)
+    public bool TryClaimResource(Resource resource)
     {
         if (_claimedResources.Contains(resource))
-        {
-            Debug.LogWarning("Attempt to claim resource that already claimed");
-            return;
-        }
+            return false;
 
         _claimedResources.Add(resource);
         resource.Expired += OnResourceExpired;
+        ResourceClaimed?.Invoke(resource);
+        return true;
     }
 
     public bool IsClaimed(Resource resource)

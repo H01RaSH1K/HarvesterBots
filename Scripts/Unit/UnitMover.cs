@@ -6,9 +6,9 @@ public class UnitMover : MonoBehaviour
 {
     [SerializeField] private float _movementSpeed = 3.5f;
 
-    public event Action<IInteractable> InteractableReached;
-
     private Coroutine _movingCoroutine;
+
+    public event Action<IInteractable> InteractableReached;
 
     public void MoveToInteractable(IInteractable interactable)
     {
