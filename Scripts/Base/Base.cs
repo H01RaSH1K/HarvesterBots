@@ -6,10 +6,12 @@ using UnityEngine;
 public class Base : MonoBehaviour, IInteractable
 {
     [SerializeField] private float _interactionRadius;
-    [SerializeField] private UnitCreator _unitCreator;
     [SerializeField] private Transform _unitSpawnPoint;
     [SerializeField] private int _startUnitCount;
     [SerializeField] private int _unitCost;
+    [SerializeField] private int _baseCost;
+
+    [SerializeField] private UnitCreator _unitCreator;
     [SerializeField] private AvailableResourceProvider _resourceProvider;
 
     private Counter _resourceCounter;
@@ -55,8 +57,15 @@ public class Base : MonoBehaviour, IInteractable
         _resourceProvider.NewResourceAvailable -= OnNewResourceAvailable;
     }
 
+    public void Initialize(UnitCreator unitCreator, AvailableResourceProvider availableResourceProvider)
+    {
+        _unitCreator = unitCreator;
+        _resourceProvider = availableResourceProvider;
+    }
+
     public void Interact(Unit unit)
     {
+        _unassignedUnits.Enqueue(unit);
         Resource resource = unit.ResourceCarrier.DropResource();
 
         if (resource != null)
@@ -66,7 +75,6 @@ public class Base : MonoBehaviour, IInteractable
             _trySpendResourcesDelegate();
         }
 
-        _unassignedUnits.Enqueue(unit);
         AssignResources();
     }
 
@@ -113,5 +121,25 @@ public class Base : MonoBehaviour, IInteractable
         _resourceCounter.Substract(_unitCost);
         AddUnit();
         return true;
+    }
+
+    private Func<bool> GetBuildBaseDelegate(IInteractable basePreview)
+    {
+        bool tryBuildBase()
+        {
+            if (_resourceCounter.Count < _baseCost)
+                return false;
+
+            if (_unassignedUnits.TryDequeue(out Unit unit) == false)
+                return false;
+
+            _resourceCounter.Substract(_baseCost);
+            unit.MoveToInteract(basePreview);
+            _units.Remove(unit);
+            _trySpendResourcesDelegate = TryAddUnit;
+            return true;
+        }
+
+        return tryBuildBase;
     }
 }
