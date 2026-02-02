@@ -42,8 +42,7 @@ public class Pool<T> : MonoBehaviour where T : MonoBehaviour
 
     private T CreateObject()
     {
-        T poolObject = Instantiate(_objectPrefab);
-        return poolObject;
+        return Instantiate(_objectPrefab);
     }
 
     private void OnDestroyObject(T poolObject)

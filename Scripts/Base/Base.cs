@@ -10,16 +10,14 @@ public class Base : MonoBehaviour, IInteractable
     [SerializeField] private Transform _unitSpawnPoint;
     [SerializeField] private int _startUnitCount;
     [SerializeField] private int _unitCost;
-    [SerializeField] private ResourceClaimer _resourceClaimer;
-    [SerializeField] private ResourceScanner _resourceScanner;
+    [SerializeField] private AvailableResourceProvider _resourceProvider;
 
     private Counter _resourceCounter;
 
     private float _interactionRadiusSquared;
 
     private List<Unit> _units;
-    private List<Unit> _unassignedUnits;
-    private List<Resource> _unassignedResources;
+    private Queue<Unit> _unassignedUnits;
     private Func<bool> _trySpendResourcesDelegate;
 
     public float InteractionRadiusSquared => _interactionRadiusSquared;
@@ -31,8 +29,7 @@ public class Base : MonoBehaviour, IInteractable
         _resourceCounter = GetComponent<Counter>();
         _interactionRadiusSquared = _interactionRadius * _interactionRadius;
         _units = new List<Unit>();
-        _unassignedUnits = new List<Unit>();
-        _unassignedResources = new List<Resource>();
+        _unassignedUnits = new Queue<Unit>();
         _trySpendResourcesDelegate = TryAddUnit;
     }
 
@@ -41,10 +38,7 @@ public class Base : MonoBehaviour, IInteractable
         foreach (Unit unit in _units)
             unit.ResourceCollected += OnResourceCollectedByUnit;
 
-        _resourceScanner.StopScanning();
-        _resourceScanner.ResourceLost += OnResourceLost;
-        _resourceScanner.ResourceFound += OnResourceFound;
-        _resourceScanner.StartScanning();
+        _resourceProvider.NewResourceAvailable += OnNewResourceAvailable;
     }
 
     private void Start()
@@ -58,9 +52,7 @@ public class Base : MonoBehaviour, IInteractable
         foreach (Unit unit in _units)
             unit.ResourceCollected -= OnResourceCollectedByUnit;
 
-        _resourceScanner.StopScanning();
-        _resourceScanner.ResourceLost -= OnResourceLost;
-        _resourceScanner.ResourceFound -= OnResourceFound;
+        _resourceProvider.NewResourceAvailable -= OnNewResourceAvailable;
     }
 
     public void Interact(Unit unit)
@@ -74,13 +66,12 @@ public class Base : MonoBehaviour, IInteractable
             _trySpendResourcesDelegate();
         }
 
-        _unassignedUnits.Add(unit);
+        _unassignedUnits.Enqueue(unit);
         AssignResources();
     }
 
-    private void OnResourceFound(Resource resource)
+    private void OnNewResourceAvailable()
     {
-        _unassignedResources.Add(resource);
         AssignResources();
     }
 
@@ -89,23 +80,18 @@ public class Base : MonoBehaviour, IInteractable
         unit.MoveToInteract(this);
     }
 
-    private void OnResourceLost(Resource resource)
-    {
-        if (_unassignedResources.Contains(resource))
-            _unassignedResources.Remove(resource);
-    }
-
     private void AssignResources()
     {
-        int minCount = Math.Min(_unassignedResources.Count, _unassignedUnits.Count);
+        Unit unit;
 
-        for (int i = 0; i < minCount; i++)
+        while (_unassignedUnits.TryDequeue(out unit))
         {
-            Unit unit = _unassignedUnits[i];
-            Resource resource = _unassignedResources[i];
-            _unassignedUnits.RemoveAt(i);
-            _unassignedResources.RemoveAt(i);
-            _resourceClaimer.ClaimResource(resource);
+            if (_resourceProvider.TryClaimAvailableResource(out Resource resource) == false)
+            {
+                _unassignedUnits.Enqueue(unit);
+                return;
+            }
+
             unit.MoveToInteract(resource);
         }
     }
@@ -115,7 +101,7 @@ public class Base : MonoBehaviour, IInteractable
         Unit unit = _unitCreator.CreateUnit();
         unit.transform.position = _unitSpawnPoint.position;
         _units.Add(unit);
-        _unassignedUnits.Add(unit);
+        _unassignedUnits.Enqueue(unit);
         unit.ResourceCollected += OnResourceCollectedByUnit;
     }
 

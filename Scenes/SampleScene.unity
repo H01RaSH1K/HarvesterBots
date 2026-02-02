@@ -1355,6 +1355,7 @@ GameObject:
   - component: {fileID: 2048438394}
   - component: {fileID: 2048438393}
   - component: {fileID: 2048438392}
+  - component: {fileID: 2048438398}
   - component: {fileID: 2048438397}
   m_Layer: 0
   m_Name: Base
@@ -1375,13 +1376,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 15bd5db0e5c7151478b349abc6b8cc47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _resourceClaimer: {fileID: 803377597}
   _scanRadius: 25
   _scanInterval: 10
   _layerMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  _startBufferSize: 100
+  _bufferSize: 128
 --- !u!114 &2048438393
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1399,8 +1399,7 @@ MonoBehaviour:
   _unitSpawnPoint: {fileID: 1459792103}
   _startUnitCount: 3
   _unitCost: 3
-  _resourceClaimer: {fileID: 803377597}
-  _resourceScanner: {fileID: 2048438392}
+  _resourceProvider: {fileID: 2048438398}
 --- !u!23 &2048438394
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -1480,6 +1479,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 854f3dee3267a7645b33e8bbd39a8b41, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &2048438398
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2048438391}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 555a5ee621d85e6488ae6b391772590b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _resourceClaimer: {fileID: 803377597}
+  _resourceScanner: {fileID: 2048438392}
 --- !u!1 &2062832904
 GameObject:
   m_ObjectHideFlags: 0

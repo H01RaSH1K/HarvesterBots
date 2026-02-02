@@ -1,43 +1,30 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class ResourceScanner : MonoBehaviour
 {
-    [SerializeField] private ResourceClaimer _resourceClaimer;
     [SerializeField] private float _scanRadius;
     [SerializeField] private float _scanInterval;
     [SerializeField] private LayerMask _layerMask = new LayerMask();
-    [SerializeField] private int _startBufferSize;
+    [SerializeField] private int _bufferSize;
 
     private WaitForSeconds _waitForScan;
     private Coroutine _scanningCoroutine;
 
     private Collider[] _overlapResultsBuffer;
-    private HashSet<Resource> _lastScanResults;
-    private HashSet<Resource> _newScanResults;
 
-    public event Action<Resource> ResourceFound;
-    public event Action<Resource> ResourceLost;
+    public event Action<Resource> ResourceDetected;
 
     private void Awake()
     {
         _waitForScan = new WaitForSeconds(_scanInterval);
-        _overlapResultsBuffer = new Collider[_startBufferSize];
-        _lastScanResults = new HashSet<Resource>();
-        _newScanResults = new HashSet<Resource>();
-    }
-
-    private void OnEnable()
-    {
-        _resourceClaimer.ResourceClaimed += OnResourceClaimed;
+        _overlapResultsBuffer = new Collider[_bufferSize];
     }
 
     private void OnDisable()
     {
         StopScanning();
-        _resourceClaimer.ResourceClaimed -= OnResourceClaimed;
     }
 
     public void StartScanning()
@@ -53,28 +40,24 @@ public class ResourceScanner : MonoBehaviour
 
         StopCoroutine(_scanningCoroutine);
         _scanningCoroutine = null;
-
-        foreach (Resource resource in _lastScanResults)
-            ResourceLost?.Invoke(resource);
-
-        _lastScanResults.Clear();
     }
 
     public void Scan()
     {
-        FillNewScanResults();
+        int overlappedCount = Physics.OverlapSphereNonAlloc(
+            transform.position,
+            _scanRadius,
+            _overlapResultsBuffer,
+            _layerMask
+        );
 
-        foreach (Resource resource in _lastScanResults)
-            if (_newScanResults.Contains(resource) == false)
-                ResourceLost?.Invoke(resource);
+        for (int i = 0; i < overlappedCount; i++)
+        {
+            Collider collider = _overlapResultsBuffer[i];
 
-        foreach (Resource resource in _newScanResults)
-            if (_lastScanResults.Contains(resource) == false)
-                ResourceFound?.Invoke(resource);
-
-        HashSet<Resource> temp = _lastScanResults;
-        _lastScanResults = _newScanResults;
-        _newScanResults = temp;
+            if (collider.TryGetComponent(out Resource resource))
+                ResourceDetected?.Invoke(resource);
+        }
     }
 
     private IEnumerator ScanningCoroutine()
@@ -86,55 +69,5 @@ public class ResourceScanner : MonoBehaviour
         }
 
         _scanningCoroutine = null;
-    }
-
-    private void FillNewScanResults()
-    {
-        _newScanResults.Clear();
-        int overlappedCount = OverlapSphere();
-
-        for (int i = 0; i < overlappedCount; i++)
-        {
-            Collider collider = _overlapResultsBuffer[i];
-                
-            if (collider.TryGetComponent(out Resource resource))
-                if (_resourceClaimer.IsClaimed(resource) == false)
-                    _newScanResults.Add(resource);
-        }
-    }
-
-    private void ResizeBuffer(int count)
-    {
-        int size = Mathf.NextPowerOfTwo(++count);
-        _overlapResultsBuffer = new Collider[size];
-    }
-
-    private int OverlapSphere()
-    {
-        int overlappedCount = Physics.OverlapSphereNonAlloc(
-            transform.position,
-            _scanRadius,
-            _overlapResultsBuffer,
-            _layerMask
-        );
-
-        while (overlappedCount >= _overlapResultsBuffer.Length)
-        {
-            ResizeBuffer(_overlapResultsBuffer.Length);
-
-            overlappedCount = Physics.OverlapSphereNonAlloc(
-                transform.position,
-                _scanRadius,
-                _overlapResultsBuffer,
-                _layerMask
-            );
-        } 
-
-        return overlappedCount;
-    }
-
-    private void OnResourceClaimed(Resource resource)
-    {
-        ResourceLost?.Invoke(resource);
     }
 }

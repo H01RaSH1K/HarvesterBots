@@ -5,31 +5,30 @@ using UnityEngine;
 [RequireComponent(typeof(ResourceCarrier))]
 public class Unit : MonoBehaviour
 {
-    public UnitMover UnitMover { get; private set; }
+    public UnitMover Mover { get; private set; }
     public ResourceCarrier ResourceCarrier { get; private set; }
 
     public event Action<Unit> ResourceCollected;
 
-
     private void Awake()
     {
-        UnitMover = GetComponent<UnitMover>();
+        Mover = GetComponent<UnitMover>();
         ResourceCarrier = GetComponent<ResourceCarrier>();
     }
 
     private void OnEnable()
     {
-        UnitMover.InteractableReached += Interact;
+        Mover.InteractableReached += Interact;
     }
 
     private void OnDisable()
     {
-        UnitMover.InteractableReached -= Interact;
+        Mover.InteractableReached -= Interact;
     }
 
     public void MoveToInteract(IInteractable interactable)
     {
-        UnitMover.MoveToInteractable(interactable);
+        Mover.MoveToInteractable(interactable);
     }
 
     public void CollectResourse(Resource resource)
