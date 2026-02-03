@@ -5,14 +5,15 @@ using UnityEngine;
 [RequireComponent(typeof(Counter))]
 public class Base : MonoBehaviour, IInteractable
 {
+    [SerializeField] private UnitCreator _unitCreator;
+
+    [SerializeField] private AvailableResourceProvider _resourceProvider;
     [SerializeField] private float _interactionRadius;
     [SerializeField] private Transform _unitSpawnPoint;
-    [SerializeField] private int _startUnitCount;
-    [SerializeField] private int _unitCost;
-    [SerializeField] private int _baseCost;
-
-    [SerializeField] private UnitCreator _unitCreator;
-    [SerializeField] private AvailableResourceProvider _resourceProvider;
+    [SerializeField] private int _startUnitCount = 0;
+    [SerializeField] private int _unitCost = 3;
+    [SerializeField] private int _baseCost = 5;
+    [SerializeField] private int _minUnitsCountToBuild = 2;
 
     private Counter _resourceCounter;
 
@@ -23,7 +24,6 @@ public class Base : MonoBehaviour, IInteractable
     private Func<bool> _trySpendResourcesDelegate;
 
     public float InteractionRadiusSquared => _interactionRadiusSquared;
-
     public Vector3 InteractionPosition => transform.position;
 
     private void Awake()
@@ -32,7 +32,7 @@ public class Base : MonoBehaviour, IInteractable
         _interactionRadiusSquared = _interactionRadius * _interactionRadius;
         _units = new List<Unit>();
         _unassignedUnits = new Queue<Unit>();
-        _trySpendResourcesDelegate = TryAddUnit;
+        SetPriorityToCreateUnits();
     }
 
     private void OnEnable()
@@ -46,7 +46,7 @@ public class Base : MonoBehaviour, IInteractable
     private void Start()
     {
         for (int i = 0; i < _startUnitCount; i++)
-            AddUnit();
+            CreateUnit();
     }
 
     private void OnDisable()
@@ -57,10 +57,11 @@ public class Base : MonoBehaviour, IInteractable
         _resourceProvider.NewResourceAvailable -= OnNewResourceAvailable;
     }
 
-    public void Initialize(UnitCreator unitCreator, AvailableResourceProvider availableResourceProvider)
+    public void Initialize(UnitCreator unitCreator, ResourceClaimer resourceClaimer, Unit unit)
     {
         _unitCreator = unitCreator;
-        _resourceProvider = availableResourceProvider;
+        _resourceProvider.Initialize(resourceClaimer);
+        AddUnit(unit);
     }
 
     public void Interact(Unit unit)
@@ -76,6 +77,20 @@ public class Base : MonoBehaviour, IInteractable
         }
 
         AssignResources();
+    }
+
+    public bool TrySetPriorityToBuild(IInteractable flag)
+    {
+        if (_units.Count < _minUnitsCountToBuild)
+            return false;
+
+        _trySpendResourcesDelegate = GetBuildBaseDelegate(flag);
+        return true;
+    }
+
+    public void SetPriorityToCreateUnits()
+    {
+        _trySpendResourcesDelegate = TryBuyUnit;
     }
 
     private void OnNewResourceAvailable()
@@ -104,26 +119,31 @@ public class Base : MonoBehaviour, IInteractable
         }
     }
 
-    private void AddUnit()
+    private void AddUnit(Unit unit)
     {
-        Unit unit = _unitCreator.CreateUnit();
-        unit.transform.position = _unitSpawnPoint.position;
         _units.Add(unit);
         _unassignedUnits.Enqueue(unit);
         unit.ResourceCollected += OnResourceCollectedByUnit;
     }
 
-    private bool TryAddUnit()
+    private void CreateUnit()
+    {
+        Unit unit = _unitCreator.CreateUnit();
+        unit.transform.position = _unitSpawnPoint.position;
+        AddUnit(unit);
+    }
+
+    private bool TryBuyUnit()
     {
         if (_resourceCounter.Count < _unitCost)
             return false;
 
         _resourceCounter.Substract(_unitCost);
-        AddUnit();
+        CreateUnit();
         return true;
     }
 
-    private Func<bool> GetBuildBaseDelegate(IInteractable basePreview)
+    private Func<bool> GetBuildBaseDelegate(IInteractable flag)
     {
         bool tryBuildBase()
         {
@@ -134,9 +154,9 @@ public class Base : MonoBehaviour, IInteractable
                 return false;
 
             _resourceCounter.Substract(_baseCost);
-            unit.MoveToInteract(basePreview);
+            unit.MoveToInteract(flag);
             _units.Remove(unit);
-            _trySpendResourcesDelegate = TryAddUnit;
+            SetPriorityToCreateUnits();
             return true;
         }
 
